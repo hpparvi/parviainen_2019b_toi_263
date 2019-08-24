@@ -1,4 +1,6 @@
 import pandas as pd
+import xarray as xa
+import seaborn as sb
 
 from copy import copy
 from pathlib import Path
@@ -6,9 +8,14 @@ from pathlib import Path
 from astropy.io import fits as pf
 from astropy.stats import sigma_clip
 from astropy.table import Table
-from numpy import zeros, diff, concatenate, sqrt
+from astropy.units import Rjup, Rsun, m, AU
+
+from numpy import zeros, diff, concatenate, sqrt, degrees, radians, array
+from numpy.random.mtrand import normal, uniform
 from uncertainties import ufloat, nominal_value
 
+from pytransit.orbits import as_from_rhop, i_from_ba, d_from_pkaiews, epoch
+from pytransit.utils.eclipses import Teq
 from pytransit.utils.keplerlc import KeplerLC
 
 N = lambda a: a/a.median()
@@ -19,6 +26,9 @@ period     = ufloat(      0.5567365, 7.3461e-05)
 star_teff = (3250, 140)
 star_logg = (4.9, 0.1)
 star_z    = (0.0, 0.1)
+
+rnep = (24622000 * m).to(Rjup)
+rstar, rstare = 0.405*Rsun, 0.077*Rsun
 
 root = Path(__file__).parent.parent.resolve()
 tess_file = root.joinpath('photometry/tess/tess2018263035959-s0003-0000000120916706-0123-s_lc.fits').resolve()
@@ -84,3 +94,48 @@ def read_lco_data():
     times = [df.BJD_TDB.values for df in dfs]
     fluxes = [N(df.rel_flux_T1).values for df in dfs]
     return times, fluxes, 'g r i'.split(), [diff(f).std() / sqrt(2) for f in fluxes], covs
+
+# Result dataframe routines
+# -------------------------
+
+def read_mcmc(fname, flatten=True):
+    with xa.open_dataset(fname) as ds:
+        npt = ds.lm_mcmc.shape[-1]
+        if flatten:
+            df = pd.DataFrame(array(ds.lm_mcmc).reshape([-1, npt]), columns=ds.coords['name'].values)
+            return df
+        else:
+            return array(ds.lm_mcmc)
+
+def read_tess_mcmc(fname):
+    with xa.open_dataset(fname) as ds:
+        npt = ds.lm_mcmc.shape[-1]
+        df = pd.DataFrame(array(ds.lm_mcmc).reshape([-1, npt]), columns=ds.coords['lm_parameter'].values)
+    return df
+
+def derive_qois(df_original):
+    df = df_original.copy()
+    ns = df.shape[0]
+
+    rstar_d = normal(rstar.value, rstare.value, size=ns) * Rsun
+    period = df.p.values if 'p' in df.columns else df.pr.values
+
+    df['period'] = period
+    df['k_true'] = sqrt(df.k2_true)
+    df['k_app'] = sqrt(df.k2_app)
+    df['cnt'] = 1. - df.k2_app / df.k2_true
+    df['a_st'] = as_from_rhop(df.rho.values, period)
+    df['a_au'] = df.a_st * rstar_d.to(AU)
+    df['inc'] = degrees(i_from_ba(df.b.values, df.a_st.values))
+    df['t14'] = d_from_pkaiews(period, df.k_true.values, df.a_st.values, radians(df.inc.values), 0.0, 0.0, 1)
+    df['t14_h'] = 24 * df.t14
+
+    df['r_app'] = df.k_app.values * rstar_d.to(Rjup)
+    df['r_true'] = df.k_true.values * rstar_d.to(Rjup)
+    df['r_app_point'] = df.k_app.values * rstar.to(Rjup)
+    df['r_true_point'] = df.k_true.values * rstar.to(Rjup)
+
+    df['r_app_rsun'] = df.k_app.values * rstar_d.to(Rsun)
+    df['r_true_rsun'] = df.k_true.values * rstar_d.to(Rsun)
+    df['teff_p'] = Teq(normal(*star_teff, size=ns), df.a_st, uniform(0.25, 0.50, ns), uniform(0, 0.4, ns))
+    return df

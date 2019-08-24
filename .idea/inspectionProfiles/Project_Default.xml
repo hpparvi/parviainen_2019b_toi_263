@@ -13,6 +13,7 @@
       <option name="ignoredIdentifiers">
         <list>
           <option value="src.tmlpf.core" />
+          <option value="astropy.units.*" />
         </list>
       </option>
     </inspection_tool>

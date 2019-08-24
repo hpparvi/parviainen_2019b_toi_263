@@ -44,7 +44,10 @@ class TMLPF(LinearModelBaseline, PhysContLPF):
 
         pbnames = 'tess g r i z_s'.split()
         pbids = pd.Categorical(pbs, categories=pbnames).codes
-        wnids = concatenate([zeros(len(times_t), 'int'), arange(1, 13)])
+        #wnids = concatenate([zeros(len(times_t), 'int'), arange(1, 13)])
+        wnids = arange(len(times))
+
+        self.wns = wns
 
         PhysContLPF.__init__(self, name, passbands=pbnames, times=times, fluxes=fluxes, pbids=pbids, wnids=wnids,
                              covariates=covs)
