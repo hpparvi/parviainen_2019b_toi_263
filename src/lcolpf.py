@@ -9,8 +9,7 @@ from core import read_lco_data, zero_epoch, period, star_teff, star_logg, star_z
 class LCOLPF(LinearModelBaseline, PhysContLPF):
     def __init__(self, name: str, use_ldtk: bool = False):
         times, fluxes, pbs, wns, covs = read_lco_data()
-        PhysContLPF.__init__(self, name, ["g'", "r'", "i'"], times, fluxes, pbids=[0, 1, 2], wnids=[0, 1, 2],
-                             covariates=covs)
+        PhysContLPF.__init__(self, name, ["g'", "r'", "i'"], times, fluxes, pbids=[0, 1, 2], wnids=[0, 1, 2], covariates=covs)
         self.result_dir = Path('results')
 
         self.set_prior('zero_epoch', NP(zero_epoch.n, zero_epoch.s))

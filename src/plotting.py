@@ -2,10 +2,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as pl
 import seaborn as sb
 from matplotlib.gridspec import GridSpec
-from matplotlib.ticker import MultipleLocator
 
 from numpy import sqrt, percentile, ceil, linspace
-#from core import load_simulation
 from matplotlib import rc
 
 color = sb.color_palette()[0]

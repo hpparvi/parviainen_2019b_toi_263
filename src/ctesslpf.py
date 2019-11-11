@@ -20,11 +20,11 @@ class CTESSLPF(TESSLPF):
     The amount of flux contamination is not constrained.
     """
     def __init__(self, name: str, flux_type: str, use_ldtk: bool = False, nsamples: int = 2,
-                 nlegendre: int = 3, bldur: float = 0.1, trdur: float = 0.04):
+                 nlegendre: int = 0, bldur: float = 0.1, trdur: float = 0.04):
 
         assert flux_type.lower() in ('sap', 'pdc'), "Flux type needs to be either 'sap' or 'pdc'"
         super().__init__(name, tess_file, zero_epoch.n, period.n, nsamples=nsamples, nlegendre=nlegendre,
-                         bldur=bldur, trdur=trdur, use_pdc=(flux_type.lower() == 'pdc'))
+                         bldur=bldur, trdur=trdur, use_pdc=(flux_type.lower() == 'pdc'), separate_noise=True)
 
         self.result_dir = Path('results')
         self.set_prior('zero_epoch', NP(zero_epoch.n - self.bjdrefi, 3 * zero_epoch.s))
